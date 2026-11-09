@@ -1,8 +1,84 @@
 # 🎴 Memory Match (Pygame)
 
-A classic **Memory Match** (Concentration) card game built with **Pygame**. Flip cards two at a time and try to find all matching pairs with as few moves as possible.
+A classic **Memory Match** (also known as **Concentration**, **Memory**, or **Pelmanism**) card game built with **Pygame**. Flip cards two at a time and try to find all matching pairs with as few moves as possible.
 
 Before the game starts, you choose your board size (**4×4**, **6×6**, **8×8**, or **10×10**). The game automatically scans the `images/` folder, loads every valid image it finds, and uses as many as needed for the selected board size.
+
+---
+
+## 📖 About the Game
+
+The game of memory Match is old and famouse game for all age groups.the game have different name around the world such as Concentration in the United States, Pelmanism in the UK, Memory in Germany, and Pairs in many other countries.  the game have a simple idea: finding matching pairs of cards. It's easy to learn for players, fun to play, and also a good game for train your memory, concentration, visual recognition, and the ability to remember where things are placed.
+
+The gameplay is very simple. All cards are placed face-down on a table or board, with each card having one matching pair hidden somewhere. Players take turns flipping over two cards at a time. If the cards match with together, they stay face-up and the player get a point. If they don't match, both cards are turned face-down again. The challenge for this game is remembering the positions of previously revealed cards so you can find their matching pairs later.
+
+ The best things about Memory Match is that every game feels different. The cards are shuffled randomly at the beginning of each round, so players never know where the matching pairs will be.the players can play harder if they want for example a small 4×4 board is a good starting point for beginners and younger players, while a larger 10×10 board with 50 pairs offers a much greater challenge and requires strong memory.
+
+---
+
+## 🎯 Game Rules in Detail
+
+### The board
+
+- The board is a **square grid** of cards, all initially face-down with a `?` on the back.
+- Each grid size determines the total number of cards and the number of pairs:
+
+  | Board size | Total cards | Pairs |
+  |------------|-------------|-------|
+  | **4×4**    | 16          | 8     |
+  | **6×6**    | 36          | 18    |
+  | **8×8**    | 64          | 32    |
+  | **10×10**  | 100         | 50    |
+
+- Every image in the deck appears **exactly twice** — once as a pair. There are no unpaired cards.
+
+### A turn
+
+1. **Click any face-down card.** It flips face-up and reveals its image. This is your **first pick**.
+2. **Click a second face-down card.** It also flips. This is your **second pick**.
+3. The game now compares the two images:
+   - ✅ **If they match** → both cards turn **green** and remain face-up permanently. Your pair counter increases by one.
+   - ❌ **If they don't match** → both cards flip back **face-down after a short delay** (800 ms by default). Your move counter still increases — every attempt counts, even a wrong one.
+4. Play continues until **every pair on the board has been matched**.
+
+### Winning
+
+- There is **no "losing"** in this game — the only outcome is *how few moves* and *how little time* you needed to clear the board.
+- When the last pair is found, the game stops the timer and displays a **"You Win!"** screen with your final **move count** and **elapsed time**.
+
+### What counts as a "move"
+
+A **move** is one complete flip pair (one first-pick + one second-pick). So:
+- If you flip two cards and they match, that's **one move**.
+- If they don't match, that's still **one move**.
+- The theoretical perfect game on a 4×4 board is **8 moves** (every pair found on the first try). Realistically, most players need 12–20.
+
+---
+
+## 🧠 Strategy & Tips
+
+Memory Match looks like pure luck, but skilled players consistently clear boards in far fewer moves than beginners. Here are the techniques that matter:
+
+### 1. Start from the corners and edges
+When a new game begins, flip cards in a **systematic order** (e.g., top-left → top-right → bottom-left → bottom-right) rather than randomly. This helps you build a mental map of the board.
+
+### 2. Chunk the board into regions
+Instead of trying to remember 16, 36, or 100 positions at once, mentally divide the board into **quadrants** and focus on one at a time. Human short-term memory holds roughly 7 ± 2 items — chunking lets you store more by grouping.
+
+### 3. Use verbal or visual anchors
+Give each image a quick mental label ("red flower", "blue cat", "sun"). Attaching a **word** to a **position** makes it far more memorable than raw pixels.
+
+### 4. Re-flip known matches first
+If you know where a pair is but there's a face-down card blocking your mental map, **flip the known pair first** to score the point, then use your remaining flips to explore.
+
+### 5. Track mismatches on purpose
+When a mismatch happens, **deliberately note both cards' positions** before they flip back. Those two locations are now "known" — you just need to find their partners.
+
+### 6. Exploit the mismatch delay
+The 800 ms delay before a wrong pair flips back is actually **free study time**. Watch carefully during that window; that's your best chance to encode the position.
+
+### 7. On large boards, work methodically
+On 8×8 and 10×10 boards, resistance to random clicking is everything. Pick a scan order (left-to-right, top-to-bottom) and stick to it — you'll find pairs far faster than by hunting randomly.
 
 ---
 
@@ -62,6 +138,7 @@ project/
 - **Recommended minimum size:** 120×120 pixels (square preferred).
 - **PNG with transparent background** looks best, but JPG works fine.
 - Each image will be **automatically scaled** to fit the current card size.
+- **Avoid duplicate images** — if the same picture appears under two different filenames, the game treats them as two separate pairs, which may confuse players (see the note in the Customization section).
 
 ### How many images do I need?
 
@@ -98,10 +175,10 @@ Alternatively, on Windows you can double-click `main.py` (if Python is associate
 
 When the game starts, you'll see a menu with four buttons:
 
-- **4×4** — easy (8 pairs)
-- **6×6** — medium (18 pairs)
-- **8×8** — hard (32 pairs)
-- **10×10** — expert (50 pairs)
+- **4×4** — easy (8 pairs) — perfect for a quick game or for children
+- **6×6** — medium (18 pairs) — a solid challenge for most players
+- **8×8** — hard (32 pairs) — demands real concentration and memory
+- **10×10** — expert (50 pairs) — a serious endurance test
 
 A button is **enabled (blue)** only if you have enough images. Disabled buttons appear **greyed out** with a hint showing how many images are missing.
 
@@ -119,7 +196,7 @@ The footer shows the **total number of images** currently loaded from the `image
 
 ### 3. After the Game
 
-- Press `R` to **restart with the same board size**.
+- Press `R` to **restart with the same board size** (a new shuffle with new random images).
 - Press `Esc` to **return to the menu** and pick a different size.
 
 ---
@@ -178,6 +255,15 @@ TEXT_COLOR          = (240, 240, 240)  # HUD text
 WARN_COLOR          = (240, 180, 80)   # "not enough images" hint
 ```
 
+### Adjusting difficulty
+
+The difficulty knob is `MISMATCH_DELAY`:
+
+- **400 ms** → very hard, almost impossible to study the cards
+- **800 ms** → default, balanced
+- **1500 ms** → relaxed, good for children
+- **2500 ms** → very forgiving
+
 ### Adding or removing board sizes
 
 Edit `GRID_OPTIONS` — the menu is generated dynamically:
@@ -186,15 +272,15 @@ Edit `GRID_OPTIONS` — the menu is generated dynamically:
 GRID_OPTIONS = [3, 4, 5, 6, 8, 10]   # any list of integers
 ```
 
-The menu will automatically show one button per option, and each button will check whether you have enough images.
+The menu will automatically show one button per option, and each button will check whether you have enough images. Just remember each size needs `(size × size) / 2` images.
 
 ---
 
-## 🧠 How It Works
+## 🧠 How It Works (Technical)
 
 ### Image scanning
 
-At startup (and every time you return to the menu via `Esc`), `scan_images()` walks the `images/` folder, loads every valid image, and stores the result in `AVAILABLE_IMAGES`. Each entry is a `(filename, pygame.Surface)` pair.
+At startup (and every time you return to the menu via `Esc`), `scan_images()` walks the `images/` folder, loads every valid image, and stores the result in `AVAILABLE_IMAGES`. Each entry is a `(filename, pygame.Surface)` pair. Invalid or unreadable files are skipped with a console warning.
 
 ### Card model
 
@@ -262,6 +348,10 @@ Images are scaled to roughly 82% of the card size, square. For non-square images
 - Crop them to square before adding them, or
 - Modify `start_game()` to preserve aspect ratio by padding.
 
+### Two different cards look identical
+
+If you have **two images that look the same** (e.g., two photos of the same cat), the game treats them as different pairs. A player might pick one, then pick the other, and expect a match — but they won't match. Use **unique-looking images** to avoid confusion.
+
 ### Card layout looks too small on very large boards
 
 The board auto-fits within the window (`WIDTH - 40` × `HEIGHT - 200`). If you increase `WIDTH`/`HEIGHT`, cards on 8×8 and 10×10 boards will grow accordingly.
@@ -271,22 +361,29 @@ The board auto-fits within the window (`WIDTH - 40` × `HEIGHT - 200`). If you i
 - Ensure `pygame` is installed: `pip install pygame`
 - Run from a terminal to see any error messages.
 
-### Text appears cut off on some systems
-
-- If the HUD text seems clipped, reduce the `info_font` and `big_font` sizes.
-
 ---
+## 📸 Screenshots
+
+### Main Menu
+![Main Menu](screenshots/game-menu.png)
+
+### Gameplay (4×4)
+![Gameplay 4x4](screenshots/game-board.png)
+
+### Winning Screen
+![Win Screen](screenshots/win-game.png)
 
 ## 🧩 Ideas for Extension
 
-- 🤖 Add a time limit per turn
+- 🤖 Add a single-player **vs. AI** mode with adjustable AI memory
 - 🏆 Track high scores per board size (save to file)
+- 👥 **Two-player turn-based** mode: whoever finds a pair gets another turn
 - 🎨 Allow choosing different card back designs
 - 🎵 Add sound effects for flips and matches
-- 🌐 Multiplayer mode (two players alternate turns)
 - ⏱️ Pause / resume the timer
 - 🖼️ Drag-and-drop images into the window to add them
 - 🎯 Show a preview of a mismatched pair for a split second before hiding
+- 📊 Add a **streak counter** that rewards consecutive correct matches
 
 ---
 
