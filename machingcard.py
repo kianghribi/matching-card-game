@@ -6,117 +6,207 @@ import os
 pygame.init()
 
 # --- Configuration ---
-WIDTH, HEIGHT = 700, 780
-GRID_COLS, GRID_ROWS = 4, 4
-CARD_SIZE = 140
-CARD_GAP = 15
-BOARD_WIDTH = GRID_COLS * CARD_SIZE + (GRID_COLS - 1) * CARD_GAP
-BOARD_HEIGHT = GRID_ROWS * CARD_SIZE + (GRID_ROWS - 1) * CARD_GAP
-BOARD_X = (WIDTH - BOARD_WIDTH) // 2
-BOARD_Y = 120
-MISMATCH_DELAY = 800  # milliseconds
-
-# --- Images ---
-IMAGES_DIR = "images"
-NUM_PAIRS = 8
-IMAGE_DISPLAY_SIZE = (100, 100)  # size of image inside each card
+WIDTH, HEIGHT = 700, 800
+MISMATCH_DELAY = 800
+GRID_OPTIONS = [4, 6, 8, 10]
 
 # --- Colors ---
-BG_COLOR            = (28, 30, 48)
-CARD_BACK           = (60, 110, 180)
-CARD_BACK_DARK      = (40, 80, 140)
-CARD_FACE           = (245, 245, 250)
-CARD_FACE_BORDER    = (150, 150, 170)
-CARD_MATCHED        = (110, 200, 130)
-CARD_MATCHED_BORDER = (60, 150, 80)
-TEXT_COLOR          = (240, 240, 240)
-HOVER_BORDER        = (255, 210, 80)
-WIN_COLOR           = (255, 220, 100)
-HINT_COLOR          = (180, 200, 255)
+BG_COLOR             = (28, 30, 48)
+BUTTON_BG            = (60, 110, 180)
+BUTTON_HOVER         = (80, 140, 210)
+BUTTON_DISABLED      = (55, 55, 65)
+BUTTON_TEXT          = (240, 240, 240)
+BUTTON_TEXT_DISABLED = (130, 130, 140)
+CARD_BACK            = (60, 110, 180)
+CARD_BACK_DARK       = (40, 80, 140)
+CARD_FACE            = (245, 245, 250)
+CARD_FACE_BORDER     = (150, 150, 170)
+CARD_MATCHED         = (110, 200, 130)
+CARD_MATCHED_BORDER  = (60, 150, 80)
+TEXT_COLOR           = (240, 240, 240)
+HOVER_BORDER         = (255, 210, 80)
+WIN_COLOR            = (255, 220, 100)
+HINT_COLOR           = (180, 200, 255)
+WARN_COLOR           = (240, 180, 80)
+SUB_COLOR_OK         = (170, 220, 180)
 
 # --- Fonts ---
-back_font = pygame.font.SysFont("arial", 60, bold=True)
-info_font = pygame.font.SysFont("arial", 24, bold=True)
-big_font  = pygame.font.SysFont("arial", 44, bold=True)
+menu_title_font = pygame.font.SysFont("arial", 52, bold=True)
+menu_btn_font   = pygame.font.SysFont("arial", 32, bold=True)
+small_font      = pygame.font.SysFont("arial", 17)
+info_font       = pygame.font.SysFont("arial", 22, bold=True)
+big_font        = pygame.font.SysFont("arial", 36, bold=True)
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Memory Match - Pygame")
 clock = pygame.time.Clock()
 
+# --- Load images ---
+IMAGES_DIR = "images"
 
-# ---------- Load & prepare images ----------
-def load_images():
-    """Load card images 1..8, accepting .png / .jpg / .jpeg for each index."""
-    surfaces = {}
-    missing = []
-    for i in range(1, NUM_PAIRS + 1):
-        path = None
-        for ext in (".png", ".jpg", ".jpeg"):
-            candidate = os.path.join(IMAGES_DIR, f"{i}{ext}")
-            if os.path.isfile(candidate):
-                path = candidate
-                break
-        if path is None:
-            missing.append(f"{i}.(png|jpg|jpeg)")
-            continue
-        try:
-            img = pygame.image.load(path).convert_alpha()
-            img = pygame.transform.smoothscale(img, IMAGE_DISPLAY_SIZE)
-            surfaces[str(i)] = img
-        except Exception as e:
-            print(f"Error loading {path}: {e}")
-            missing.append(path)
+def scan_images():
+    """Auto-scan images/ folder for all valid image files."""
+    if not os.path.isdir(IMAGES_DIR):
+        return []
+    exts = (".png", ".jpg", ".jpeg")
+    result = []
+    for fname in sorted(os.listdir(IMAGES_DIR)):
+        if fname.lower().endswith(exts):
+            full = os.path.join(IMAGES_DIR, fname)
+            try:
+                img = pygame.image.load(full).convert_alpha()
+                result.append((fname, img))
+            except Exception as e:
+                print(f"Skipping invalid image {full}: {e}")
+    return result
 
-    if missing:
-        print("\n⚠️  Missing or invalid images:")
-        for m in missing:
-            print("   -", m)
-        print("\nPlace 8 images numbered 1..8 (.png/.jpg/.jpeg) inside the 'images/' folder.")
-        pygame.quit()
-        sys.exit(1)
+AVAILABLE_IMAGES = scan_images()
 
-    return surfaces
+if not AVAILABLE_IMAGES:
+    print(f"⚠️  No images found in '{IMAGES_DIR}/' folder.")
+    print("Place images named like 1.png, 2.jpg, etc. inside the folder.")
+    pygame.quit()
+    sys.exit(1)
+
+print(f"Loaded {len(AVAILABLE_IMAGES)} images from '{IMAGES_DIR}/' folder.")
 
 
-IMAGE_SURFACES = load_images()
-IMAGE_KEYS = list(IMAGE_SURFACES.keys())  # ["1", "2", ..., "8"]
-
-
+# --- Card class ---
 class Card:
-    __slots__ = ("image_key", "flipped", "matched")
+    __slots__ = ("pair_id", "image", "flipped", "matched")
 
-    def __init__(self, image_key):
-        self.image_key = image_key
+    def __init__(self, pair_id, image):
+        self.pair_id = pair_id
+        self.image = image
         self.flipped = False
         self.matched = False
 
 
-def create_deck():
-    deck = []
-    for key in IMAGE_KEYS:
-        deck.append(Card(key))
-        deck.append(Card(key))
-    random.shuffle(deck)
-    return deck
+# --- State ---
+STATE_MENU = "menu"
+STATE_PLAY = "play"
+state = STATE_MENU
 
-
-# --- Game state ---
-total_pairs = len(IMAGE_KEYS)
+grid_size = 4
+board_cols = 4
+board_rows = 4
+card_size = 100
+card_gap = 12
+board_x = 0
+board_y = 0
 deck = []
 first_pick = None
 second_pick = None
 mismatch_time = 0
 moves = 0
 pairs_found = 0
+total_pairs = 8
 game_won = False
 start_time = 0
 final_time = 0
+qm_surface = None
 
 
-def reset_game():
-    global deck, first_pick, second_pick, mismatch_time
-    global moves, pairs_found, game_won, start_time, final_time
-    deck = create_deck()
+# --- Menu ---
+def get_menu_buttons():
+    btn_w, btn_h = 280, 76
+    gap = 22
+    start_y = 230
+    x = (WIDTH - btn_w) // 2
+    buttons = []
+    for i, gsize in enumerate(GRID_OPTIONS):
+        pairs_needed = (gsize * gsize) // 2
+        y = start_y + i * (btn_h + gap)
+        rect = pygame.Rect(x, y, btn_w, btn_h)
+        playable = len(AVAILABLE_IMAGES) >= pairs_needed
+        buttons.append((gsize, pairs_needed, rect, playable))
+    return buttons
+
+
+def draw_menu():
+    screen.fill(BG_COLOR)
+
+    title = menu_title_font.render("Memory Match", True, TEXT_COLOR)
+    screen.blit(title, title.get_rect(center=(WIDTH // 2, 100)))
+
+    subtitle = info_font.render("Select a board size", True, HINT_COLOR)
+    screen.blit(subtitle, subtitle.get_rect(center=(WIDTH // 2, 165)))
+
+    mouse = pygame.mouse.get_pos()
+    for gsize, pairs_needed, rect, playable in get_menu_buttons():
+        if not playable:
+            bg = BUTTON_DISABLED
+            text_color = BUTTON_TEXT_DISABLED
+        elif rect.collidepoint(mouse):
+            bg = BUTTON_HOVER
+            text_color = BUTTON_TEXT
+        else:
+            bg = BUTTON_BG
+            text_color = BUTTON_TEXT
+
+        pygame.draw.rect(screen, bg, rect, border_radius=12)
+
+        label = f"{gsize} × {gsize}"
+        lbl = menu_btn_font.render(label, True, text_color)
+        screen.blit(lbl, lbl.get_rect(center=(rect.centerx, rect.centery - 10)))
+
+        if playable:
+            sub = small_font.render(f"{pairs_needed} pairs", True, SUB_COLOR_OK)
+        else:
+            sub = small_font.render(
+                f"needs {pairs_needed} images (have {len(AVAILABLE_IMAGES)})",
+                True, WARN_COLOR
+            )
+        screen.blit(sub, sub.get_rect(center=(rect.centerx, rect.centery + 20)))
+
+    footer = small_font.render(
+        f"Images loaded: {len(AVAILABLE_IMAGES)}    |    Esc: quit",
+        True, HINT_COLOR
+    )
+    screen.blit(footer, footer.get_rect(center=(WIDTH // 2, HEIGHT - 40)))
+
+
+# --- Start game ---
+def start_game(gsize):
+    global grid_size, board_cols, board_rows, card_size, card_gap
+    global board_x, board_y, deck, first_pick, second_pick
+    global mismatch_time, moves, pairs_found, total_pairs
+    global game_won, start_time, final_time, state, qm_surface
+
+    grid_size = gsize
+    board_cols = gsize
+    board_rows = gsize
+    total_pairs = (gsize * gsize) // 2
+
+    max_board_w = WIDTH - 40
+    max_board_h = HEIGHT - 200
+    card_size = min(
+        (max_board_w - (gsize - 1) * card_gap) // gsize,
+        (max_board_h - (gsize - 1) * card_gap) // gsize,
+    )
+    board_w = board_cols * card_size + (board_cols - 1) * card_gap
+    board_h = board_rows * card_size + (board_rows - 1) * card_gap
+    board_x = (WIDTH - board_w) // 2
+    board_y = 120 + (max_board_h - board_h) // 2
+
+    # Pre-render "?" for card backs, scaled to card size
+    qm_font_size = max(16, card_size // 3)
+    qm_font = pygame.font.SysFont("arial", qm_font_size, bold=True)
+    qm_surface = qm_font.render("?", True, CARD_BACK_DARK)
+
+    # Build deck with unique pair IDs
+    imgs = [img for _, img in AVAILABLE_IMAGES]
+    random.shuffle(imgs)
+    selected = imgs[:total_pairs]
+
+    img_size = max(20, int(card_size * 0.82))
+    deck = []
+    for pair_id, img in enumerate(selected):
+        scaled = pygame.transform.smoothscale(img, (img_size, img_size))
+        deck.append(Card(pair_id, scaled))
+        deck.append(Card(pair_id, scaled))
+    random.shuffle(deck)
+
     first_pick = None
     second_pick = None
     mismatch_time = 0
@@ -125,17 +215,20 @@ def reset_game():
     game_won = False
     start_time = pygame.time.get_ticks()
     final_time = 0
+    state = STATE_PLAY
 
 
+# --- Rendering helpers ---
 def get_card_rect(index):
-    row = index // GRID_COLS
-    col = index % GRID_COLS
-    x = BOARD_X + col * (CARD_SIZE + CARD_GAP)
-    y = BOARD_Y + row * (CARD_SIZE + CARD_GAP)
-    return pygame.Rect(x, y, CARD_SIZE, CARD_SIZE)
+    row = index // board_cols
+    col = index % board_cols
+    x = board_x + col * (card_size + card_gap)
+    y = board_y + row * (card_size + card_gap)
+    return pygame.Rect(x, y, card_size, card_size)
 
 
 def draw_card(rect, card, hovered):
+    radius = max(6, min(12, card_size // 8))
     if card.matched:
         bg, border, bw = CARD_MATCHED, CARD_MATCHED_BORDER, 3
     elif card.flipped:
@@ -145,19 +238,14 @@ def draw_card(rect, card, hovered):
         border = HOVER_BORDER if hovered else CARD_BACK_DARK
         bw = 4 if hovered else 3
 
-    pygame.draw.rect(screen, bg, rect, border_radius=12)
-    pygame.draw.rect(screen, border, rect, bw, border_radius=12)
+    pygame.draw.rect(screen, bg, rect, border_radius=radius)
+    pygame.draw.rect(screen, border, rect, bw, border_radius=radius)
 
-    # Card content
     if card.flipped or card.matched:
-        img = IMAGE_SURFACES.get(card.image_key)
-        if img is not None:
-            screen.blit(img, img.get_rect(center=rect.center))
+        screen.blit(card.image, card.image.get_rect(center=rect.center))
     else:
-        inner = rect.inflate(-40, -40)
-        pygame.draw.rect(screen, CARD_BACK_DARK, inner, 2, border_radius=8)
-        qm = back_font.render("?", True, CARD_BACK_DARK)
-        screen.blit(qm, qm.get_rect(center=rect.center))
+        if qm_surface:
+            screen.blit(qm_surface, qm_surface.get_rect(center=rect.center))
 
 
 def format_time(ms):
@@ -166,34 +254,32 @@ def format_time(ms):
 
 
 def draw_hud():
-    title = big_font.render("Memory Match", True, TEXT_COLOR)
-    screen.blit(title, title.get_rect(center=(WIDTH // 2, 50)))
+    title = big_font.render(f"Memory Match  -  {grid_size} × {grid_size}", True, TEXT_COLOR)
+    screen.blit(title, title.get_rect(center=(WIDTH // 2, 42)))
 
     moves_text = info_font.render(f"Moves: {moves}", True, TEXT_COLOR)
     pairs_text = info_font.render(f"Pairs: {pairs_found}/{total_pairs}", True, TEXT_COLOR)
-    elapsed    = final_time if game_won else (pygame.time.get_ticks() - start_time)
-    time_text  = info_font.render(f"Time: {format_time(elapsed)}", True, TEXT_COLOR)
+    elapsed = final_time if game_won else (pygame.time.get_ticks() - start_time)
+    time_text = info_font.render(f"Time: {format_time(elapsed)}", True, TEXT_COLOR)
 
-    screen.blit(moves_text, (30, 90))
-    screen.blit(pairs_text, (WIDTH // 2 - pairs_text.get_width() // 2, 90))
-    screen.blit(time_text, (WIDTH - time_text.get_width() - 30, 90))
+    screen.blit(moves_text, (30, 82))
+    screen.blit(pairs_text, (WIDTH // 2 - pairs_text.get_width() // 2, 82))
+    screen.blit(time_text, (WIDTH - time_text.get_width() - 30, 82))
 
     if game_won:
         msg = big_font.render("You Win!", True, WIN_COLOR)
-        screen.blit(msg, msg.get_rect(center=(WIDTH // 2, HEIGHT - 65)))
-        hint = info_font.render(
-            f"Moves: {moves}   |   Time: {format_time(final_time)}   |   Press R to play again",
+        screen.blit(msg, msg.get_rect(center=(WIDTH // 2, HEIGHT - 60)))
+        hint = small_font.render(
+            f"Moves: {moves}   |   Time: {format_time(final_time)}   |   R: again   |   Esc: menu",
             True, HINT_COLOR)
-        screen.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT - 20)))
+        screen.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT - 22)))
     else:
-        hint = info_font.render("R: restart   -   Esc: quit", True, HINT_COLOR)
-        screen.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT - 25)))
+        hint = small_font.render("R: restart  -  Esc: back to menu", True, HINT_COLOR)
+        screen.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT - 22)))
 
 
-# ---------- Main loop ----------
-reset_game()
+# --- Main loop ---
 running = True
-
 while running:
     clock.tick(60)
     mouse_pos = pygame.mouse.get_pos()
@@ -203,55 +289,65 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_r:
-                reset_game()
-            elif event.key == pygame.K_ESCAPE:
-                running = False
+            if event.key == pygame.K_ESCAPE:
+                if state == STATE_PLAY:
+                    AVAILABLE_IMAGES = scan_images()  # refresh on return
+                    state = STATE_MENU
+                else:
+                    running = False
+            elif event.key == pygame.K_r and state == STATE_PLAY:
+                start_game(grid_size)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_clicked = True
 
-    # Handle card click
-    if mouse_clicked and not game_won and second_pick is None:
+    if state == STATE_MENU:
+        if mouse_clicked:
+            for gsize, pairs_needed, rect, playable in get_menu_buttons():
+                if rect.collidepoint(mouse_pos) and playable:
+                    start_game(gsize)
+                    break
+        draw_menu()
+
+    elif state == STATE_PLAY:
+        if mouse_clicked and not game_won and second_pick is None:
+            for i, card in enumerate(deck):
+                rect = get_card_rect(i)
+                if rect.collidepoint(mouse_pos) and not card.flipped and not card.matched:
+                    card.flipped = True
+                    if first_pick is None:
+                        first_pick = card
+                    else:
+                        second_pick = card
+                        moves += 1
+                        if first_pick.pair_id == second_pick.pair_id:
+                            first_pick.matched = True
+                            second_pick.matched = True
+                            pairs_found += 1
+                            first_pick = None
+                            second_pick = None
+                            if pairs_found == total_pairs:
+                                game_won = True
+                                final_time = pygame.time.get_ticks() - start_time
+                        else:
+                            mismatch_time = pygame.time.get_ticks()
+                    break
+
+        if second_pick is not None:
+            if pygame.time.get_ticks() - mismatch_time > MISMATCH_DELAY:
+                if first_pick:
+                    first_pick.flipped = False
+                second_pick.flipped = False
+                first_pick = None
+                second_pick = None
+
+        screen.fill(BG_COLOR)
+        draw_hud()
+
         for i, card in enumerate(deck):
             rect = get_card_rect(i)
-            if rect.collidepoint(mouse_pos) and not card.flipped and not card.matched:
-                card.flipped = True
-                if first_pick is None:
-                    first_pick = card
-                else:
-                    second_pick = card
-                    moves += 1
-                    if first_pick.image_key == second_pick.image_key:
-                        first_pick.matched = True
-                        second_pick.matched = True
-                        pairs_found += 1
-                        first_pick = None
-                        second_pick = None
-                        if pairs_found == total_pairs:
-                            game_won = True
-                            final_time = pygame.time.get_ticks() - start_time
-                    else:
-                        mismatch_time = pygame.time.get_ticks()
-                break
-
-    # Mismatch timeout → flip both back
-    if second_pick is not None:
-        if pygame.time.get_ticks() - mismatch_time > MISMATCH_DELAY:
-            if first_pick:
-                first_pick.flipped = False
-            second_pick.flipped = False
-            first_pick = None
-            second_pick = None
-
-    # Render
-    screen.fill(BG_COLOR)
-    draw_hud()
-
-    for i, card in enumerate(deck):
-        rect = get_card_rect(i)
-        hovered = (rect.collidepoint(mouse_pos) and not card.flipped
-                   and not card.matched and second_pick is None and not game_won)
-        draw_card(rect, card, hovered)
+            hovered = (rect.collidepoint(mouse_pos) and not card.flipped
+                       and not card.matched and second_pick is None and not game_won)
+            draw_card(rect, card, hovered)
 
     pygame.display.flip()
 
