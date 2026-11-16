@@ -7,6 +7,33 @@ Before the game starts, you choose your board size (**4×4**, **6×6**, **8×8**
 The game includes a **persistent scoreboard per board size**, a customizable **player name**, and **polished visuals** — gradient or custom backgrounds, decorative card-style buttons, and a custom card back.
 
 ---
+## 📥 Download & Install (For Players)
+
+If you just want to play the game and don't care about the code, follow these simple steps. **You do not need to install Python or any other software.**
+
+### Step 1: Download
+Download the latest `machingcard.zip` file from the [Releases](../../releases) page (or from the link provided by the developer).
+
+### Step 2: Extract (Very Important!)
+**Do NOT run the game directly from inside the ZIP file.** You must extract it first, otherwise, your scores won't save.
+1. Go to your **Downloads** folder.
+2. Right-click on `machingcard.zip` and select **"Extract All..."** (or use WinRAR/7-Zip).
+3. Choose a destination folder and click **Extract**.
+
+### Step 3: Play
+1. Open the newly created folder.
+2. Double-click on **`machingcard.exe`** to launch the game.
+3. Have fun! 🎉
+
+### ⚠️ Windows Defender Warning
+Because this game was created by an independent developer and doesn't have a paid digital signature, Windows might show a blue warning screen saying *"Windows protected your PC"*.
+- Click on **"More info"**.
+- Click on **"Run anyway"**.
+- *(If your antivirus flags it, simply add the file to your antivirus exceptions/whitelist).*
+
+> 💡 **Note:** Your high scores will be saved automatically in a file called `scores.json` right next to the `machingcard.exe` file.
+
+---
 
 ## 📖 About the Game
 

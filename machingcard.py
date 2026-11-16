@@ -13,7 +13,12 @@ MISMATCH_DELAY = 800
 GRID_OPTIONS = [4, 6, 8, 10]
 MAX_SCORES_PER_SIZE = 10
 SCORES_FILE = "scores.json"
-IMAGES_DIR = "images"
+if getattr(sys, 'frozen', False):
+    IMAGES_DIR = os.path.join(sys._MEIPASS, "images")
+    SCORES_FILE = os.path.join(os.path.dirname(sys.executable), "scores.json")
+else:
+    IMAGES_DIR = "images"
+    SCORES_FILE = "scores.json"
 RESERVED_BASES = {"background", "bg", "card_back", "menu_bg"}
 
 # --- Colors ---
